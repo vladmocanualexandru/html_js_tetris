@@ -1,0 +1,283 @@
+<!doctype html> 
+<html>
+  <head><meta http-equiv="X-UA-Compatible" content="IE=edge" > <title>Tetris</title>
+    <style type="text/css">
+      #board {
+        background-image : url("background.png");
+        width : 170px;
+        height : 221px;
+        margin-left: auto;
+        margin-right : auto;
+        margin-top : 15%;
+        z-index:1;
+        
+      }
+      
+      .fullSquare, .emptySquare {
+        background-image : url("square.png");
+        width : 10px;
+        height : 10px;
+        position : absolute;
+        opacity : 1;
+        z-index:2;
+        margin:1px;
+      }
+      
+      .emptySquare {
+        opacity : 0.1443;
+      }
+      
+    </style>
+    <script type="text/javascript" src="jquery.js"></script>
+    <script type="text/javascript">
+    
+      var board = [];
+      var rows = 20, cols = 10;
+      
+      var pieces = [
+        [[1,1],[1,1]],
+        [[1,0,0],[1,1,1]],
+        [[1,1,1],[1,0,0]],
+        [[1,1,1,1]],
+        [[1,1,0],[0,1,1]],
+        [[0,1,1],[1,1,0]]
+      ];
+      var currentPiece = null;
+      
+      function initAndBuildBoard() {
+        for (var row=0; row<rows; row++) {
+          for (var col=0; col<cols; col++) {
+            board[row*cols+col] = {isEmpty : true, rowIndex : row, colIndex : col};
+            
+            var tile = document.createElement("div");
+            tile.setAttribute("id","tile_"+row+"_"+col);
+            tile.setAttribute("class","emptySquare");
+            tile.style.marginLeft = 1+(col*11)+"px";
+            tile.style.marginTop = 1+(row*11)+"px";
+            
+            document.getElementById("board").appendChild(tile);
+          }
+        }
+        
+      }
+      
+      
+      function transformPiece(transformationId) {
+        for (var row=0; row<currentPiece.configuration.length; row++) {
+          for (var col=0; col<currentPiece.configuration[row].length; col++) {
+            if (currentPiece.configuration[row][col]==1) { board[(row+currentPiece.topLeftY)*cols + col + currentPiece.topLeftX].isEmpty = true };
+          }
+        }  
+        
+        var operationIsAllowed = true;
+        
+        switch (transformationId) {
+          case "MOVE_LEFT" : {
+            
+            for (var row=0; row<currentPiece.configuration.length && operationIsAllowed; row++) {
+              for (var col=0; col<currentPiece.configuration[row].length && operationIsAllowed; col++) {
+                if (currentPiece.configuration[row][col]==1) { 
+                  try {
+                    if (board[(row+currentPiece.topLeftY)*cols + col + currentPiece.topLeftX-1].isEmpty == false || (currentPiece.topLeftX-1)<0) {
+                      operationIsAllowed = false;
+                    }    
+                  }
+                  catch(err) {
+                    operationIsAllowed = false;
+                  }
+                };
+              }
+            }
+
+            if (operationIsAllowed) currentPiece.topLeftX--;    
+             
+            break;
+          }
+          case "MOVE_DOWN" : {
+             for (var row=0; row<currentPiece.configuration.length && operationIsAllowed; row++) {
+              for (var col=0; col<currentPiece.configuration[row].length && operationIsAllowed; col++) {
+                if (currentPiece.configuration[row][col]==1) { 
+                    if (board[(row+currentPiece.topLeftY+1)*cols + col + currentPiece.topLeftX].isEmpty == false || (currentPiece.topLeftY+1+currentPiece.configuration.length)>rows) {
+                      operationIsAllowed = false;
+                    }    
+                };
+              }
+            }
+
+            if (operationIsAllowed) currentPiece.topLeftY++;    
+            
+            break;
+          }
+          case "MOVE_RIGHT" : {
+           for (var row=0; row<currentPiece.configuration.length && operationIsAllowed; row++) {
+              for (var col=0; col<currentPiece.configuration[row].length && operationIsAllowed; col++) {
+                if (currentPiece.configuration[row][col]==1) { 
+                  try {
+                    if (board[(row+currentPiece.topLeftY)*cols + col + currentPiece.topLeftX+1].isEmpty == false || (currentPiece.topLeftX+1+currentPiece.configuration[0].length)>cols) {
+                      operationIsAllowed = false;
+                    }    
+                  }
+                  catch(err) {
+                    operationIsAllowed = false;
+                  }
+                };
+              }
+            }
+
+            if (operationIsAllowed) currentPiece.topLeftX++;    
+          
+            break;
+          }
+          case "ROTATE_CW" : {
+            var newConfiguration = [];
+            
+            for (var col = 0; col<currentPiece.configuration[0].length; col++) {
+              var newArray = [];
+              
+              for (var row = 0; row<currentPiece.configuration.length; row++) {
+                newArray.push(currentPiece.configuration[currentPiece.configuration.length-row-1][col]);
+              }
+              
+              newConfiguration.push(newArray);
+            }
+            
+            for (var row=0; row<newConfiguration.length && operationIsAllowed; row++) {
+              for (var col=0; col<newConfiguration[row].length && operationIsAllowed; col++) {
+                if (newConfiguration[row][col]==1) { 
+                    if (board[(row+currentPiece.topLeftY+1)*cols + col + currentPiece.topLeftX].isEmpty == false || (currentPiece.topLeftY+1+newConfiguration.length)>rows) {
+                      operationIsAllowed = false;
+                    }    
+                };
+              }
+            }
+            
+            if (operationIsAllowed) {
+              currentPiece.configuration = newConfiguration;
+            }
+            
+            break;
+          }
+          case "ROTATE_CCW" : {
+            var newConfiguration = [];
+            
+            for (var col = currentPiece.configuration[0].length-1; col>=0; col--) {
+              var newArray = [];
+              
+              for (var row = 0; row<currentPiece.configuration.length; row++) {
+                newArray.push(currentPiece.configuration[row][col]);
+              }
+              
+              newConfiguration.push(newArray);
+            }
+            
+            for (var row=0; row<newConfiguration.length && operationIsAllowed; row++) {
+              for (var col=0; col<newConfiguration[row].length && operationIsAllowed; col++) {
+                if (newConfiguration[row][col]==1) { 
+                    if (board[(row+currentPiece.topLeftY+1)*cols + col + currentPiece.topLeftX].isEmpty == false || (currentPiece.topLeftY+1+newConfiguration.length)>rows) {
+                      operationIsAllowed = false;
+                    }    
+                };
+              }
+            }
+            
+            if (operationIsAllowed) {
+              currentPiece.configuration = newConfiguration;
+            }
+            
+            break;
+          }
+        }
+        
+        for (var row=0; row<currentPiece.configuration.length; row++) {
+          for (var col=0; col<currentPiece.configuration[row].length; col++) {
+            if (currentPiece.configuration[row][col]==1) { board[(row+currentPiece.topLeftY)*cols + col + currentPiece.topLeftX].isEmpty = false };
+          }
+        }
+        
+        return operationIsAllowed;
+      }
+      
+      function refreshBoard() {
+        for (var row=0; row<rows; row++) {
+          for (var col=0; col<cols; col++) {
+            $("#tile_"+row+"_"+col).attr("class",board[row*cols+col].isEmpty?"emptySquare":"fullSquare");
+          }
+        }
+      }
+      
+      function gameEngineTick() {
+        if (!transformPiece("MOVE_DOWN")) {
+          resetCurrentPiece();
+        }
+        
+        refreshBoard();
+      }
+      
+      function resetCurrentPiece() {
+        currentPiece={
+          configuration : pieces[Math.round(Math.random()*(pieces.length-1))],
+          topLeftX: 3,
+          topLeftY: 0
+        };
+      }
+     
+    
+      $(document).ready(function(){
+         
+        initAndBuildBoard();
+        resetCurrentPiece();
+        transformPiece("SHOW");
+        
+        $(document).keydown(function(e){
+        
+          switch(e.keyCode) {
+            case 39 : //right arrow
+              { 
+                transformPiece("MOVE_RIGHT");
+                
+                refreshBoard();
+                break;
+              }
+            case 50 : //up arrow
+              { 
+                transformPiece("ROTATE_CW");
+                
+                refreshBoard();
+                break;
+              }
+            case 49 : //up arrow
+              { 
+                transformPiece("ROTATE_CCW");
+                
+                refreshBoard();
+                break;
+              }
+            case 37 : //left arrow
+              { 
+                transformPiece("MOVE_LEFT");
+                
+                refreshBoard();
+                break;
+              }
+            case 40 : //down arrow
+              { 
+                if (!transformPiece("MOVE_DOWN")) {
+                  resetCurrentPiece();
+                }
+                
+                refreshBoard();
+                break;
+              }
+          }          
+        });
+        
+        setInterval(gameEngineTick, 1000);
+        
+        refreshBoard();
+      });
+    </script>
+  </head>
+  <body>
+    <div id="board"></div>
+  </body>
+</html>
